@@ -1,0 +1,163 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+  // Database for Plexus Property AI Agent
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  password      String
+  name          String?
+  role          String     @default("user") // user, admin
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  sessions      Session[]
+  leads         Lead[]
+  chats         Chat[]
+  voiceCalls    VoiceCall[]
+  
+  @@index([email])
+}
+
+model Session {
+  id            String     @id @default(cuid())
+  sessionToken  String     @unique
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires       DateTime
+  createdAt     DateTime   @default(now())
+  
+  @@index([userId])
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  name          String
+  phone         String
+  email         String?
+  budget        String?
+  location      String?
+  propertyType  String?
+  intent        String?     // rent, purchase
+  timeline      String?     // immediate, 1month, 3months, 6months, 1year
+  status        String     @default("new") // new, warm, hot, cold, contacted, converted
+  source        String     @default("chat") // chat, voice, form
+  
+  chatSummary   String?
+  notes         String?
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Chat {
+  id            String     @id @default(cuid())
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  leadId        String?
+  messages      ChatMessage[]
+  
+  title         String?
+  summary       String?
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id            String     @id @default(cuid())
+  chatId        String
+  chat          Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  
+  role          String     // user, assistant
+  content       String
+  metadata      String?
+  
+  createdAt     DateTime   @default(now())
+  
+  @@index([chatId])
+}
+
+model VoiceCall {
+  id            String     @id @default(cuid())
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  leadId        String?
+  
+  duration      Int        @default(0) // in seconds
+  transcript    String?
+  summary       String?
+  audioUrl      String?
+  status        String     @default("initiated") // initiated, in_progress, completed, failed
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  @@index([status])
+  @@index([createdAt])
+}
+
+model KnowledgeBase {
+  id            String     @id @default(cuid())
+  
+  title         String
+  content       String
+  fileUrl       String?
+  fileType      String?    // pdf, docx, text
+  fileSize      Int?
+  
+  embeddings    Embedding[]
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  @@index([title])
+}
+
+model Embedding {
+  id            String     @id @default(cuid())
+  kbId          String
+  kb            KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  
+  chunk         String
+  embedding     String     // Stored as JSON string representation
+  
+  createdAt     DateTime   @default(now())
+  
+  @@index([kbId])
+}
+
+model LucknowArea {
+  id            String     @id @default(cuid())
+  
+  areaName      String     @unique
+  description   String?
+  facilities    String?    // JSON string: { schools, hospitals, malls, metro, railway, airport, business_hubs }
+  priceRange    String?
+  propertyTypes String?    // comma-separated
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  @@index([areaName])
+}

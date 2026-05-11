@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(npx prisma *)",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(npm run *)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@plexus-property.com\",\"password\":\"AdminPassword123!\"}')",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"message\":\"3 BHK in Gomti Nagar, 1-2 cr\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"message\":\"2 bhk under 80 lakh\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"message\":\"hello\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"3 BHK in Gomti Nagar, 1-2 cr\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"2 bhk under 80 lakh\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"hello\"}')",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s \"http://localhost:3000/_next/static/css/app/layout.css\")",
+      "Bash(curl -s http://localhost:3000/ -o /dev/null -w \"page: HTTP %{http_code}\\\\n\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"i need 2bhk in gomti\",\"history\":[]}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"indira nagar\",\"history\":[\"i need 2bhk in gomti\"]}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"under 80 lakh\",\"history\":[\"i need 2bhk in gomti\",\"indira nagar\"]}')",
+      "Bash(npm install *)",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"hi, my buyer wants something nice\",\"turns\":[]}')",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('llm:',d.get\\('llm'\\)\\); print\\('header:',d.get\\('header'\\)\\); print\\('reply:',d.get\\('reply'\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"hi my buyer wants a nice family home around 1 cr\",\"turns\":[]}')",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('llm:',d.get\\('llm'\\)\\); print\\('reply:',d.get\\('reply'\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"Test message from broker: family of four shifting from Mumbai, want 3 BHK in Gomti Nagar around 1.5 cr\",\"turns\":[]}')",
+      "Bash(gh auth *)",
+      "PowerShell(gh auth status 2>&1)",
+      "Bash(git config *)",
+      "Bash(git add *)",
+      "Bash(grep -E \"^\\\\.env$\")"
+    ]
+  }
+}
