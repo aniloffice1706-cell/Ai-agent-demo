@@ -110,7 +110,6 @@ export default function Home() {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" /> online
                 </div>
               </div>
-              <button className="text-slate-400 hover:text-slate-200 p-1" aria-label="Call">📞</button>
               <button className="text-slate-400 hover:text-slate-200 p-1" aria-label="Menu">⋮</button>
             </header>
 

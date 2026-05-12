@@ -29,7 +29,19 @@
       "PowerShell(gh auth status 2>&1)",
       "Bash(git config *)",
       "Bash(git add *)",
-      "Bash(grep -E \"^\\\\.env$\")"
+      "Bash(grep -E \"^\\\\.env$\")",
+      "Bash(grep -iE \"\\(\\\\.env$|dev\\\\.db|node_modules\\)\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" https://github.com/aniloffice1706-cell/Ai-agent-demo)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" https://github.com/aniloffice1706-cell)",
+      "Bash(cmdkey /list)",
+      "PowerShell(cmdkey /delete:\"LegacyGeneric:target=git:https://github.com\")",
+      "Bash(curl -s -o /dev/null -w \"http://localhost:3000 → HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -X POST http://localhost:3000/api/chat -H \"Content-Type: application/json\" -d '{\"content\":\"hi\",\"turns\":[]}')",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('provider:',d.get\\('provider'\\),' llm:',d.get\\('llm'\\)\\); print\\('reply:',d.get\\('reply'\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('provider:',d.get\\('provider'\\)\\); print\\('reply:',d.get\\('reply'\\)\\)\")"
     ]
   }
 }

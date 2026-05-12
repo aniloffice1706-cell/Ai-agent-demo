@@ -62,7 +62,19 @@ export function VoiceAssistant() {
       }
     };
     rec.onerror = (e: any) => {
-      setError(e.error || 'Voice error');
+      const code = e?.error;
+      let msg = code || 'Voice error';
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        msg =
+          "Microphone is blocked. Click the 🔒 icon in your browser's address bar → Site settings → Microphone: Allow → reload this page.";
+      } else if (code === 'no-speech') {
+        msg = "Didn't catch anything — try again and speak after the beep.";
+      } else if (code === 'audio-capture') {
+        msg = "No microphone detected. Plug one in or check OS sound settings.";
+      } else if (code === 'network') {
+        msg = "Network error talking to the speech service. Check your internet.";
+      }
+      setError(msg);
       setIsListening(false);
     };
     rec.onend = () => setIsListening(false);
@@ -113,12 +125,28 @@ export function VoiceAssistant() {
     }
   }
 
-  function toggleMic() {
+  async function toggleMic() {
     setError(null);
     if (!recRef.current) return;
     if (isListening) {
       recRef.current.stop();
       setIsListening(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (e: any) {
+      const name = e?.name;
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        setError(
+          "Microphone permission denied. Click the 🔒 icon in your browser's address bar → Site settings → Microphone: Allow → reload this page.",
+        );
+      } else if (name === 'NotFoundError') {
+        setError('No microphone detected on this device.');
+      } else {
+        setError(e?.message ?? 'Could not access microphone');
+      }
       return;
     }
     try {

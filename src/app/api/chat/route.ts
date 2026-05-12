@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type Anthropic from '@anthropic-ai/sdk';
+import type OpenAI from 'openai';
 import { rateLimitMiddleware, sanitizeInput } from '@/lib/security/rateLimiter';
 import { ChatMessageSchema } from '@/lib/security/validation';
 import {
@@ -14,7 +15,14 @@ import {
   type Requirement,
   type Project,
 } from '@/lib/projects';
-import { getAnthropic, CLAUDE_MODEL } from '@/lib/ai/client';
+import {
+  getAnthropic,
+  getOpenAI,
+  getGroq,
+  CLAUDE_MODEL,
+  OPENAI_MODEL,
+  GROQ_MODEL,
+} from '@/lib/ai/client';
 
 type Turn = { role: 'user' | 'assistant'; text: string };
 
@@ -73,16 +81,7 @@ function fallbackReply(
   return `${lead}\n\n${lines}\n\n${followUp}`;
 }
 
-async function llmReply(
-  turns: Turn[],
-  current: string,
-  req: Requirement,
-  matches: Project[],
-  relaxed: string[],
-): Promise<string | null> {
-  const a = getAnthropic();
-  if (!a) return null;
-
+function buildSystemPrompt(req: Requirement, matches: Project[], relaxed: string[]): string {
   const portfolioSummary = PROJECTS.map(
     (p) =>
       `- ${p.name} (${p.area}, ${formatPrice(p.priceLakh)}, ${p.bhk.join('/')} BHK, ${p.intent.join('+')}, ${p.tag})`,
@@ -101,7 +100,7 @@ async function llmReply(
   const reqSummary = summarizeRequirement(req) || '(none yet)';
   const relaxNote = relaxed.length > 0 ? `Constraints relaxed: ${relaxed.join(', ')}.` : '';
 
-  const system = `You are "Plexus AI", a sharp, warm real-estate broker assistant for Lucknow, India.
+  return `You are "Plexus AI", a sharp, warm real-estate broker assistant for Lucknow, India.
 Your job: help a human broker qualify their buyer's brief and surface matching projects from the portfolio.
 
 Style:
@@ -120,21 +119,50 @@ Current parsed requirement: ${reqSummary}
 Top portfolio matches for this turn:
 ${matchSummary}
 ${relaxNote}`;
+}
 
-  const messages = [
-    ...turns.map((t) => ({
-      role: t.role,
-      content: t.text,
-    })),
-    { role: 'user' as const, content: current },
-  ];
-
+async function tryOpenAICompatible(
+  client: OpenAI,
+  model: string,
+  label: string,
+  system: string,
+  turns: Turn[],
+  current: string,
+): Promise<string | null> {
   try {
-    const resp = await a.messages.create({
+    const resp = await client.chat.completions.create({
+      model,
+      max_tokens: 350,
+      messages: [
+        { role: 'system', content: system },
+        ...turns.map((t) => ({ role: t.role, content: t.text })),
+        { role: 'user' as const, content: current },
+      ],
+    });
+    const text = resp.choices?.[0]?.message?.content?.trim();
+    return text || null;
+  } catch (e: any) {
+    console.error(`${label} API error:`, e?.message ?? e);
+    return null;
+  }
+}
+
+async function tryAnthropic(
+  system: string,
+  turns: Turn[],
+  current: string,
+): Promise<string | null> {
+  const client = getAnthropic();
+  if (!client) return null;
+  try {
+    const resp = await client.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 350,
       system,
-      messages,
+      messages: [
+        ...turns.map((t) => ({ role: t.role, content: t.text })),
+        { role: 'user' as const, content: current },
+      ],
     });
     const text = resp.content
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
@@ -142,10 +170,37 @@ ${relaxNote}`;
       .join('')
       .trim();
     return text || null;
-  } catch (e) {
-    console.error('Claude API error:', e);
+  } catch (e: any) {
+    console.error('Claude API error:', e?.message ?? e);
     return null;
   }
+}
+
+async function llmReply(
+  turns: Turn[],
+  current: string,
+  req: Requirement,
+  matches: Project[],
+  relaxed: string[],
+): Promise<{ text: string; provider: string } | null> {
+  const system = buildSystemPrompt(req, matches, relaxed);
+
+  const groq = getGroq();
+  if (groq) {
+    const g = await tryOpenAICompatible(groq, GROQ_MODEL, 'Groq', system, turns, current);
+    if (g) return { text: g, provider: 'groq' };
+  }
+
+  const oai = getOpenAI();
+  if (oai) {
+    const o = await tryOpenAICompatible(oai, OPENAI_MODEL, 'OpenAI', system, turns, current);
+    if (o) return { text: o, provider: 'openai' };
+  }
+
+  const a = await tryAnthropic(system, turns, current);
+  if (a) return { text: a, provider: 'anthropic' };
+
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -177,8 +232,8 @@ export async function POST(request: Request) {
       ? findMatchesRelaxed(req)
       : { matches: [], relaxed: [] };
 
-    const llmText = await llmReply(rawHistory, sanitized, req, matches, relaxed);
-    const reply = llmText ?? fallbackReply(req, matches, relaxed, usedCommand, hasRequirement);
+    const llm = await llmReply(rawHistory, sanitized, req, matches, relaxed);
+    const reply = llm?.text ?? fallbackReply(req, matches, relaxed, usedCommand, hasRequirement);
 
     return NextResponse.json({
       success: true,
@@ -190,7 +245,8 @@ export async function POST(request: Request) {
         price: formatPrice(p.priceLakh),
         tag: p.tag,
       })),
-      llm: llmText !== null,
+      llm: llm !== null,
+      provider: llm?.provider ?? 'regex',
     });
   } catch (error) {
     console.error('Chat route error:', error);
