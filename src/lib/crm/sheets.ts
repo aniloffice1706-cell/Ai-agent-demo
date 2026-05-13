@@ -39,8 +39,9 @@ function getSheets() {
       const j = JSON.parse(readFileSync(jsonPath, 'utf8'));
       email = j.client_email;
       key = j.private_key;
+      console.log('[sheets] auth from JSON file');
     } catch (e) {
-      console.error('Failed to parse google-credentials.json:', e);
+      console.error('[sheets] Failed to parse google-credentials.json:', e);
     }
   }
 
@@ -54,9 +55,18 @@ function getSheets() {
         key = `-----BEGIN PRIVATE KEY-----\n${key}\n-----END PRIVATE KEY-----\n`;
       }
     }
+    console.log(
+      '[sheets] auth from env: email=',
+      email ? email.slice(0, 20) + '...' : 'MISSING',
+      ' key=',
+      key ? `${key.length}chars, has_BEGIN=${key.includes('BEGIN')}` : 'MISSING',
+    );
   }
 
-  if (!email || !key) return null;
+  if (!email || !key) {
+    console.warn('[sheets] no credentials available');
+    return null;
+  }
 
   const auth = new google.auth.JWT({
     email,
@@ -118,7 +128,14 @@ async function ensureHeader(sheets: ReturnType<typeof google.sheets>, sheetId: s
 export async function syncLeadToSheet(lead: Lead): Promise<number | null> {
   const sheets = getSheets();
   const sheetId = process.env.GOOGLE_SHEETS_ID;
-  if (!sheets || !sheetId) return null;
+  if (!sheets) {
+    console.warn('[sheets] skipping: no sheets client');
+    return null;
+  }
+  if (!sheetId) {
+    console.warn('[sheets] skipping: GOOGLE_SHEETS_ID env var missing');
+    return null;
+  }
 
   await ensureHeader(sheets, sheetId);
   const row = leadToRow(lead);

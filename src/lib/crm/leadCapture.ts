@@ -85,8 +85,14 @@ export async function captureLead(input: CaptureInput) {
     ? await prisma.lead.update({ where: { sessionId }, data })
     : await prisma.lead.create({ data });
 
-  // Fire-and-forget — never block the chat response on Sheets latency
-  syncLeadToSheet(lead).catch((e) => console.error('Sheets sync failed:', e?.message ?? e));
+  // Awaited so errors surface in serverless request logs (Vercel kills fire-and-forget).
+  // Sheets API typically responds in 400–800ms which is acceptable for this chat flow.
+  try {
+    const rowIdx = await syncLeadToSheet(lead);
+    console.log('[sheets] sync ok, row=', rowIdx, 'lead=', lead.id);
+  } catch (e: any) {
+    console.error('[sheets] sync failed:', e?.message ?? e);
+  }
 
   return lead;
 }
