@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import type { Requirement, Project } from '@/lib/projects';
 import { scoreLead } from './scoring';
 import { syncLeadToSheet } from './sheets';
+import { triggerMockCall } from '@/lib/calls/mockCall';
 
 type CaptureInput = {
   sessionId: string;
@@ -92,6 +93,16 @@ export async function captureLead(input: CaptureInput) {
     console.log('[sheets] sync ok, row=', rowIdx, 'lead=', lead.id);
   } catch (e: any) {
     console.error('[sheets] sync failed:', e?.message ?? e);
+  }
+
+  // Auto-trigger mock outbound call the first time a lead crosses to HOT
+  const justTurnedHot = priority === 'hot' && existing?.priority !== 'hot';
+  if (justTurnedHot && lead.phone) {
+    try {
+      await triggerMockCall({ leadId: lead.id, reason: 'hot_threshold' });
+    } catch (e: any) {
+      console.error('[call] auto-trigger failed:', e?.message ?? e);
+    }
   }
 
   return lead;
