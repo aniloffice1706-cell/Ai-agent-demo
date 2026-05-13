@@ -245,6 +245,47 @@ export default function Home() {
               ))}
             </div>
 
+            {lead && lead.phone && (
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  onClick={async () => {
+                    setMessages((m) => [...m, { role: 'assistant', text: 'Requesting a callback…', time: now() }]);
+                    try {
+                      const res = await fetch('/api/calls/initiate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ leadId: lead.id }),
+                      });
+                      const data = await res.json();
+                      setMessages((m) => [
+                        ...m,
+                        {
+                          role: 'assistant',
+                          text: data.success
+                            ? `Callback queued. You'll hear from us shortly on ${lead.phone}.`
+                            : `Couldn't queue a callback: ${data.error}`,
+                          time: now(),
+                        },
+                      ]);
+                    } catch {
+                      setMessages((m) => [...m, { role: 'assistant', text: 'Network error queuing callback.', time: now() }]);
+                    }
+                  }}
+                  className="flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30 transition"
+                >
+                  <span>📞</span><span>Request callback</span>
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Hi Plexus AI, I'm ${lead.name === 'Unknown' ? 'looking' : lead.name + ' looking'} for ${header ?? 'a property'}.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30 transition"
+                >
+                  <span>💬</span><span>Continue on WhatsApp</span>
+                </a>
+              </div>
+            )}
+
             <div className="mt-4 space-y-1.5 text-[11px] text-amber-400/90">
               <div className="flex items-center gap-1.5"><span>⚡</span><span>Searched across verified project inventory</span></div>
               <div className="flex items-center gap-1.5"><span>⚡</span><span>Ranked by buyer fit</span></div>
