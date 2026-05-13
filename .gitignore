@@ -13,6 +13,7 @@ coverage
 .DS_Store
 .vscode
 .idea
+.claude
 *.log
 logs
 *.swp
@@ -22,6 +23,9 @@ logs
 uploads/private
 prisma/dev.db
 prisma/dev.db-journal
+
+google-credentials.json
+*-credentials.json
 
 .cache
 .turbo

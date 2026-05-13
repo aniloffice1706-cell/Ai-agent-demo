@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 type Turn = { role: 'user' | 'assistant'; text: string };
 type Match = { name: string; area: string; price: string; tag: string };
+type Lead = { id: string; name: string; phone: string; score: number; priority: string };
 
 type SpeechRecognitionLike = {
   continuous: boolean;
@@ -32,9 +33,11 @@ export function VoiceAssistant() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [header, setHeader] = useState<string | null>(null);
+  const [lead, setLead] = useState<Lead | null>(null);
   const [error, setError] = useState<string | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const turnsRef = useRef<Turn[]>([]);
+  const sessionIdRef = useRef<string>('');
 
   useEffect(() => {
     const SR = getSpeechRecognition();
@@ -88,6 +91,18 @@ export function VoiceAssistant() {
 
   useEffect(() => { turnsRef.current = turns; }, [turns]);
 
+  useEffect(() => {
+    if (!sessionIdRef.current) {
+      const stored = typeof window !== 'undefined' ? sessionStorage.getItem('plexus-session') : null;
+      if (stored) sessionIdRef.current = stored;
+      else {
+        const id = `voice_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        sessionIdRef.current = id;
+        if (typeof window !== 'undefined') sessionStorage.setItem('plexus-session', id);
+      }
+    }
+  }, []);
+
   function speak(text: string) {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -110,13 +125,19 @@ export function VoiceAssistant() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: text, turns: priorTurns }),
+        body: JSON.stringify({
+          content: text,
+          turns: priorTurns,
+          sessionId: sessionIdRef.current,
+          channel: 'voice',
+        }),
       });
       const data = await res.json();
       const reply: string = data.reply ?? "Sorry, I didn't catch that.";
       setTurns((t) => [...t, { role: 'assistant', text: reply }]);
       if (Array.isArray(data.matches) && data.matches.length > 0) setMatches(data.matches);
       if (typeof data.header === 'string' && data.header) setHeader(data.header);
+      if (data.lead) setLead(data.lead);
       speak(reply);
     } catch {
       setError('Network error');
@@ -279,8 +300,25 @@ export function VoiceAssistant() {
 
           {/* Matches panel */}
           <aside className="rounded-xl border border-sky-500/40 bg-[#0a1322] p-4 flex flex-col">
-            <div className="text-[11px] tracking-[0.2em] font-semibold text-sky-400 mb-1">
-              BROKER PORTFOLIO MATCH
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-[11px] tracking-[0.2em] font-semibold text-sky-400">
+                BROKER PORTFOLIO MATCH
+              </div>
+              {lead && (
+                <span
+                  className={
+                    'text-[10px] px-2 py-0.5 rounded-full border ' +
+                    (lead.priority === 'hot'
+                      ? 'bg-rose-500/15 text-rose-300 border-rose-500/40'
+                      : lead.priority === 'warm'
+                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                        : 'bg-slate-500/15 text-slate-300 border-slate-500/40')
+                  }
+                  title={`Lead: ${lead.name || 'Unknown'}${lead.phone ? ' · ' + lead.phone : ''}`}
+                >
+                  {lead.priority.toUpperCase()} · {lead.score}
+                </span>
+              )}
             </div>
             <div className="text-lg font-semibold text-slate-100">{header ?? 'Awaiting brief…'}</div>
             <div className="text-xs text-slate-400 mt-0.5 mb-4">
